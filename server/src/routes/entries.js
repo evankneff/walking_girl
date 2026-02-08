@@ -2,49 +2,58 @@ const express = require('express');
 const router = express.Router();
 const { queries, getWeekStartDate } = require('../db/database');
 
+const MAX_MINUTES_PER_ENTRY = 300;
+const MAX_NAME_LENGTH = 100;
+
+// Public endpoint: list approved names for the entry form dropdown
+router.get('/users/names', (req, res) => {
+  try {
+    const users = queries.getAllUsers.all();
+    res.json(users.map(u => u.name));
+  } catch (error) {
+    console.error('Error fetching user names:', error);
+    res.status(500).json({ error: 'Failed to fetch names' });
+  }
+});
+
 // Submit walking time entry
 router.post('/entries', (req, res) => {
   try {
     const { name, minutes } = req.body;
 
-    // Validation
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const userName = name.trim();
+
+    if (userName.length > MAX_NAME_LENGTH) {
+      return res.status(400).json({ error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` });
     }
 
     if (!minutes || isNaN(minutes) || minutes <= 0) {
       return res.status(400).json({ error: 'Valid minutes (greater than 0) is required' });
     }
 
-    const userName = name.trim();
     const minutesInt = parseInt(minutes);
 
-    // Check if user exists, if not create them
-    let user = queries.getUserByName.get(userName);
-    if (!user) {
-      try {
-        queries.addUser.run(userName);
-        user = queries.getUserByName.get(userName);
-      } catch (err) {
-        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-          // Race condition - user was created between check and insert
-          user = queries.getUserByName.get(userName);
-        } else {
-          throw err;
-        }
-      }
+    if (minutesInt > MAX_MINUTES_PER_ENTRY) {
+      return res.status(400).json({ error: `Maximum ${MAX_MINUTES_PER_ENTRY} minutes per entry` });
     }
 
-    // Get current week start date
-    const weekStartDate = getWeekStartDate();
+    // Whitelist only — name must already exist in users
+    const user = queries.getUserByName.get(userName);
+    if (!user) {
+      return res.status(400).json({ error: 'Name not found. Please select a name from the list.' });
+    }
 
-    // Insert entry
+    const weekStartDate = getWeekStartDate();
     const createdAt = new Date().toISOString();
     queries.addEntry.run(userName, minutesInt, weekStartDate, createdAt);
 
-    res.json({ 
-      success: true, 
-      message: `Successfully added ${minutesInt} minutes for ${userName}` 
+    res.json({
+      success: true,
+      message: `Successfully added ${minutesInt} minutes for ${userName}`,
     });
   } catch (error) {
     console.error('Error adding entry:', error);
@@ -53,4 +62,3 @@ router.post('/entries', (req, res) => {
 });
 
 module.exports = router;
-

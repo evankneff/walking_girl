@@ -1,16 +1,18 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: walking-girl-app:latest # or use build: if building on server
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-me-to-a-real-secret}
     volumes:
-      - ./server/data:/app/server/data
+      - walking_girl_data:/app/server/data
+    user: "0:0" # Run as root to avoid permission issues
     restart: unless-stopped
 
+volumes:
+  walking_girl_data:

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const { queries, getWeekStartDate } = require('../db/database');
+const { queries, deleteUserCascade } = require('../db/database');
 const { authenticateToken, generateToken } = require('../middleware/auth');
 
 // Admin login
@@ -13,23 +13,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    // Get admin password from settings
     const setting = queries.getSetting.get('admin_password');
     if (!setting) {
       return res.status(500).json({ error: 'Admin password not configured' });
     }
 
-    const hashedPassword = setting.value;
-
-    // Compare passwords
-    const match = await bcrypt.compare(password, hashedPassword);
+    const match = await bcrypt.compare(password, setting.value);
     if (!match) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Generate token
     const token = generateToken({ admin: true });
-
     res.json({ token, success: true });
   } catch (error) {
     console.error('Error during login:', error);
@@ -43,12 +37,10 @@ router.get('/settings', authenticateToken, (req, res) => {
     const settingsRows = queries.getAllSettings.all();
     const settings = {};
     settingsRows.forEach(row => {
-      // Don't send password hash
       if (row.key !== 'admin_password') {
         settings[row.key] = row.value;
       }
     });
-
     res.json(settings);
   } catch (error) {
     console.error('Error getting settings:', error);
@@ -78,7 +70,6 @@ router.post('/settings', authenticateToken, (req, res) => {
     }
 
     if (admin_password !== undefined && admin_password.trim()) {
-      // Hash new password
       const hashedPassword = bcrypt.hashSync(admin_password, 10);
       queries.updateSetting.run(hashedPassword, 'admin_password');
     }
@@ -110,6 +101,10 @@ router.post('/users', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    if (name.trim().length > 100) {
+      return res.status(400).json({ error: 'Name must be 100 characters or fewer' });
+    }
+
     queries.addUser.run(name.trim());
     const user = queries.getUserByName.get(name.trim());
 
@@ -123,7 +118,7 @@ router.post('/users', authenticateToken, (req, res) => {
   }
 });
 
-// Delete user (protected)
+// Delete user — cascades to entries (protected)
 router.delete('/users/:id', authenticateToken, (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -131,18 +126,34 @@ router.delete('/users/:id', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID' });
     }
 
-    queries.deleteUser.run(id);
-    res.json({ success: true, message: 'User deleted' });
+    const result = deleteUserCascade(id);
+
+    if (!result.deleted) {
+      return res.status(404).json({ error: result.reason });
+    }
+
+    res.json({
+      success: true,
+      message: `Deleted ${result.userName} and ${result.entriesRemoved} entries`,
+    });
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
-// Get all entries (protected)
+// Get all entries (protected) — supports ?user_name= filter
 router.get('/entries', authenticateToken, (req, res) => {
   try {
-    const entries = queries.getAllEntries.all();
+    const { user_name } = req.query;
+
+    let entries;
+    if (user_name) {
+      entries = queries.getEntriesByUser.all(user_name);
+    } else {
+      entries = queries.getAllEntries.all();
+    }
+
     res.json(entries);
   } catch (error) {
     console.error('Error getting entries:', error);
@@ -167,4 +178,3 @@ router.delete('/entries/:id', authenticateToken, (req, res) => {
 });
 
 module.exports = router;
-

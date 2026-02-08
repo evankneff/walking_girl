@@ -1,0 +1,6 @@
+---
+description: 
+alwaysApply: true
+---
+
+Before starting a new process, such as reviewing a bug or building a new feature, review the applications mvp, located at /aiDocs/mvp.md. Ensure all changes made to this application are in line with the overall applications designs.

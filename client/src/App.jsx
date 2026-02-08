@@ -16,7 +16,6 @@ function App() {
             <div className="nav-links">
               <Link to="/" className="nav-link">Dashboard</Link>
               <Link to="/entry" className="nav-link">Enter Time</Link>
-              <Link to="/admin" className="nav-link">Admin</Link>
             </div>
           </div>
         </nav>

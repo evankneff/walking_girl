@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const MAX_MINUTES = 300;
 
 function EntryForm() {
+  const [names, setNames] = useState([]);
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/users/names')
+      .then(res => res.json())
+      .then(data => setNames(data))
+      .catch(() => setError('Failed to load names'));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,9 +26,7 @@ function EntryForm() {
     try {
       const response = await fetch('/api/entries', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, minutes: parseInt(minutes) }),
       });
 
@@ -47,15 +55,18 @@ function EntryForm() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="name">Your Name</label>
-            <input
-              type="text"
+            <select
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
               required
               disabled={loading}
-            />
+            >
+              <option value="">Select your name</option>
+              {names.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
@@ -67,9 +78,11 @@ function EntryForm() {
               onChange={(e) => setMinutes(e.target.value)}
               placeholder="Enter minutes"
               min="1"
+              max={MAX_MINUTES}
               required
               disabled={loading}
             />
+            <span className="form-hint">Max {MAX_MINUTES} minutes per entry</span>
           </div>
 
           {message && <div className="message success">{message}</div>}
@@ -85,4 +98,3 @@ function EntryForm() {
 }
 
 export default EntryForm;
-
