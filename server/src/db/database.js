@@ -37,17 +37,25 @@ function initializeDatabase() {
     )
   `);
 
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+
   const defaultSettings = {
     goal_minutes: '600',
     start_location: 'Start',
     end_location: 'Destination',
-    admin_password: bcrypt.hashSync('admin', 10),
+    admin_password: bcrypt.hashSync(adminPassword, 10),
   };
 
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   Object.entries(defaultSettings).forEach(([key, value]) => {
     insertSetting.run(key, value);
   });
+
+  // If ADMIN_PASSWORD env var is set, always sync it to the DB on startup
+  if (process.env.ADMIN_PASSWORD) {
+    const hashed = bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10);
+    db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(hashed, 'admin_password');
+  }
 }
 
 initializeDatabase();
