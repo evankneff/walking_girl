@@ -29,6 +29,8 @@ function AdminPanel() {
   // Delete-user confirmation
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  
+  const [activeTab, setActiveTab] = useState('management');
 
   useEffect(() => {
     if (token) {
@@ -238,6 +240,18 @@ function AdminPanel() {
   // Per-kid totals
   const userTotalMinutes = userEntries.reduce((sum, e) => sum + e.minutes, 0);
 
+  const leaderboardData = useMemo(() => {
+    const stats = {};
+    entries.forEach(e => {
+      if (!stats[e.user_name]) {
+        stats[e.user_name] = { name: e.user_name, totalMinutes: 0, count: 0 };
+      }
+      stats[e.user_name].totalMinutes += e.minutes;
+      stats[e.user_name].count += 1;
+    });
+    return Object.values(stats).sort((a, b) => b.totalMinutes - a.totalMinutes);
+  }, [entries]);
+
   if (!authenticated) {
     return (
       <div className="admin-container">
@@ -323,6 +337,28 @@ function AdminPanel() {
         </div>
       )}
 
+      <div className="admin-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'management' ? 'active' : ''}`}
+          onClick={() => setActiveTab('management')}
+        >
+          Management
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('leaderboard')}
+        >
+          Leaderboard
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
+          onClick={() => setActiveTab('activity')}
+        >
+          Activity Log
+        </button>
+      </div>
+
+      {activeTab === 'management' && (
       <div className="admin-sections">
         {/* Settings */}
         <section className="admin-section">
@@ -395,9 +431,38 @@ function AdminPanel() {
           </div>
         </section>
       </div>
+      )}
+
+      {activeTab === 'leaderboard' && (
+        <section className="admin-section">
+          <h3>Leaderboard</h3>
+          <div className="entries-table-wrap">
+            <table className="entries-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Name</th>
+                  <th>Total Minutes</th>
+                  <th>Entries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboardData.map((user, index) => (
+                  <tr key={user.name}>
+                    <td>{index + 1}</td>
+                    <td>{user.name}</td>
+                    <td>{user.totalMinutes}</td>
+                    <td>{user.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Per-kid view */}
-      {selectedUser && (
+      {selectedUser && activeTab === 'management' && (
         <section className="admin-section per-kid-section">
           <div className="per-kid-header">
             <h3>{selectedUser.name}'s Entries</h3>
@@ -449,6 +514,7 @@ function AdminPanel() {
       )}
 
       {/* Activity Log */}
+      {activeTab === 'activity' && (
       <section className="admin-section activity-log-section">
         <h3>Activity Log ({entries.length} entries)</h3>
         {entries.length === 0 ? (
@@ -494,6 +560,7 @@ function AdminPanel() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

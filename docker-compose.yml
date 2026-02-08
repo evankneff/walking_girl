@@ -11,10 +11,9 @@ services:
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-change-me-to-a-real-secret}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GOOGLE_CLOUD_PROJECT=evan-neff-misc
+      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/keys/adc.json
     volumes:
-      - walking_girl_data:/app/server/data
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/keys/adc.json:ro
     user: "0:0" # Run as root to avoid permission issues
     restart: unless-stopped
-
-volumes:
-  walking_girl_data:

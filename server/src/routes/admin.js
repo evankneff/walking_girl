@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    const setting = queries.getSetting.get('admin_password');
+    const setting = await queries.getSetting.get('admin_password');
     if (!setting) {
       return res.status(500).json({ error: 'Admin password not configured' });
     }
@@ -32,9 +32,9 @@ router.post('/login', async (req, res) => {
 });
 
 // Get all settings (protected)
-router.get('/settings', authenticateToken, (req, res) => {
+router.get('/settings', authenticateToken, async (req, res) => {
   try {
-    const settingsRows = queries.getAllSettings.all();
+    const settingsRows = await queries.getAllSettings.all();
     const settings = {};
     settingsRows.forEach(row => {
       if (row.key !== 'admin_password') {
@@ -49,7 +49,7 @@ router.get('/settings', authenticateToken, (req, res) => {
 });
 
 // Update settings (protected)
-router.post('/settings', authenticateToken, (req, res) => {
+router.post('/settings', authenticateToken, async (req, res) => {
   try {
     const { goal_minutes, start_location, end_location, admin_password } = req.body;
 
@@ -58,20 +58,20 @@ router.post('/settings', authenticateToken, (req, res) => {
       if (isNaN(minutes) || minutes <= 0) {
         return res.status(400).json({ error: 'Goal minutes must be a positive number' });
       }
-      queries.updateSetting.run(minutes.toString(), 'goal_minutes');
+      await queries.updateSetting.run(minutes.toString(), 'goal_minutes');
     }
 
     if (start_location !== undefined) {
-      queries.updateSetting.run(start_location, 'start_location');
+      await queries.updateSetting.run(start_location, 'start_location');
     }
 
     if (end_location !== undefined) {
-      queries.updateSetting.run(end_location, 'end_location');
+      await queries.updateSetting.run(end_location, 'end_location');
     }
 
     if (admin_password !== undefined && admin_password.trim()) {
       const hashedPassword = bcrypt.hashSync(admin_password, 10);
-      queries.updateSetting.run(hashedPassword, 'admin_password');
+      await queries.updateSetting.run(hashedPassword, 'admin_password');
     }
 
     res.json({ success: true, message: 'Settings updated' });
@@ -82,9 +82,9 @@ router.post('/settings', authenticateToken, (req, res) => {
 });
 
 // Get all users (protected)
-router.get('/users', authenticateToken, (req, res) => {
+router.get('/users', authenticateToken, async (req, res) => {
   try {
-    const users = queries.getAllUsers.all();
+    const users = await queries.getAllUsers.all();
     res.json(users);
   } catch (error) {
     console.error('Error getting users:', error);
@@ -93,7 +93,7 @@ router.get('/users', authenticateToken, (req, res) => {
 });
 
 // Add user (protected)
-router.post('/users', authenticateToken, (req, res) => {
+router.post('/users', authenticateToken, async (req, res) => {
   try {
     const { name } = req.body;
 
@@ -105,12 +105,12 @@ router.post('/users', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Name must be 100 characters or fewer' });
     }
 
-    queries.addUser.run(name.trim());
-    const user = queries.getUserByName.get(name.trim());
+    await queries.addUser.run(name.trim());
+    const user = await queries.getUserByName.get(name.trim());
 
     res.json({ success: true, user });
   } catch (error) {
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (error.code === 'DUPLICATE_USER') {
       return res.status(400).json({ error: 'User already exists' });
     }
     console.error('Error adding user:', error);
@@ -119,14 +119,14 @@ router.post('/users', authenticateToken, (req, res) => {
 });
 
 // Delete user — cascades to entries (protected)
-router.delete('/users/:id', authenticateToken, (req, res) => {
+router.delete('/users/:id', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
+    const id = req.params.id;
+    if (!id) {
       return res.status(400).json({ error: 'Invalid user ID' });
     }
 
-    const result = deleteUserCascade(id);
+    const result = await deleteUserCascade(id);
 
     if (!result.deleted) {
       return res.status(404).json({ error: result.reason });
@@ -143,15 +143,15 @@ router.delete('/users/:id', authenticateToken, (req, res) => {
 });
 
 // Get all entries (protected) — supports ?user_name= filter
-router.get('/entries', authenticateToken, (req, res) => {
+router.get('/entries', authenticateToken, async (req, res) => {
   try {
     const { user_name } = req.query;
 
     let entries;
     if (user_name) {
-      entries = queries.getEntriesByUser.all(user_name);
+      entries = await queries.getEntriesByUser.all(user_name);
     } else {
-      entries = queries.getAllEntries.all();
+      entries = await queries.getAllEntries.all();
     }
 
     res.json(entries);
@@ -162,14 +162,14 @@ router.get('/entries', authenticateToken, (req, res) => {
 });
 
 // Delete entry (protected)
-router.delete('/entries/:id', authenticateToken, (req, res) => {
+router.delete('/entries/:id', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
+    const id = req.params.id;
+    if (!id) {
       return res.status(400).json({ error: 'Invalid entry ID' });
     }
 
-    queries.deleteEntry.run(id);
+    await queries.deleteEntry.run(id);
     res.json({ success: true, message: 'Entry deleted' });
   } catch (error) {
     console.error('Error deleting entry:', error);

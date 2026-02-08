@@ -6,9 +6,9 @@ const MAX_MINUTES_PER_ENTRY = 300;
 const MAX_NAME_LENGTH = 100;
 
 // Public endpoint: list approved names for the entry form dropdown
-router.get('/users/names', (req, res) => {
+router.get('/users/names', async (req, res) => {
   try {
-    const users = queries.getAllUsers.all();
+    const users = await queries.getAllUsers.all();
     res.json(users.map(u => u.name));
   } catch (error) {
     console.error('Error fetching user names:', error);
@@ -17,7 +17,7 @@ router.get('/users/names', (req, res) => {
 });
 
 // Submit walking time entry
-router.post('/entries', (req, res) => {
+router.post('/entries', async (req, res) => {
   try {
     const { name, minutes } = req.body;
 
@@ -42,18 +42,31 @@ router.post('/entries', (req, res) => {
     }
 
     // Whitelist only — name must already exist in users
-    const user = queries.getUserByName.get(userName);
+    const user = await queries.getUserByName.get(userName);
     if (!user) {
       return res.status(400).json({ error: 'Name not found. Please select a name from the list.' });
     }
 
     const weekStartDate = getWeekStartDate();
     const createdAt = new Date().toISOString();
-    queries.addEntry.run(userName, minutesInt, weekStartDate, createdAt);
+    await queries.addEntry.run(userName, minutesInt, weekStartDate, createdAt);
+
+    // Calculate relative stats
+    const userEntries = await queries.getEntriesByUser.all(userName);
+    const userTotal = userEntries.reduce((sum, e) => sum + (e.minutes || 0), 0);
+    
+    const goalSetting = await queries.getSetting.get('goal_minutes');
+    const goalMinutes = parseInt(goalSetting ? goalSetting.value : '600');
+    
+    const contributionPercent = goalMinutes > 0 ? (userTotal / goalMinutes) * 100 : 0;
 
     res.json({
       success: true,
       message: `Successfully added ${minutesInt} minutes for ${userName}`,
+      relativeStats: {
+        userTotalMinutes: userTotal,
+        contributionPercent: Math.round(contributionPercent * 10) / 10
+      }
     });
   } catch (error) {
     console.error('Error adding entry:', error);

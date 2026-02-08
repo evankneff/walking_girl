@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const MAX_MINUTES = 300;
 
 function EntryForm() {
+  const navigate = useNavigate();
   const [names, setNames] = useState([]);
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     fetch('/api/users/names')
@@ -37,8 +40,17 @@ function EntryForm() {
       }
 
       setMessage(data.message || 'Entry submitted successfully!');
+      if (data.relativeStats) {
+        setStats(data.relativeStats);
+      }
+
       setName('');
       setMinutes('');
+
+      // Auto-redirect
+      setTimeout(() => {
+        navigate('/');
+      }, 2500);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,7 +97,17 @@ function EntryForm() {
             <span className="form-hint">Max {MAX_MINUTES} minutes per entry</span>
           </div>
 
-          {message && <div className="message success">{message}</div>}
+          {message && (
+            <div className="message success">
+              {message}
+              {stats && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                  <p>You've walked <strong>{stats.userTotalMinutes}</strong> minutes total!</p>
+                  <p>You've contributed <strong>{stats.contributionPercent}%</strong> to the goal!</p>
+                </div>
+              )}
+            </div>
+          )}
           {error && <div className="message error">{error}</div>}
 
           <button type="submit" className="submit-button" disabled={loading}>

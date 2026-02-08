@@ -91,6 +91,16 @@ function Dashboard() {
             {progress.totalEntries} entries
           </div>
         </div>
+
+        <div className="stat-card" style={{ background: 'linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)' }}>
+          <div className="stat-label">Group Streak</div>
+          <div className="stat-value">
+            🔥 {progress.streakWeeks || 0}
+          </div>
+          <div className="stat-detail">
+            Consecutive Weeks
+          </div>
+        </div>
       </div>
 
       <MapVisualization progress={progress} />

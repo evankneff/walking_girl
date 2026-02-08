@@ -1,4 +1,5 @@
 import React from 'react';
+import SaviorIcon from './SaviorIcon';
 
 function MapVisualization({ progress }) {
   const progressPercentage = Math.min(progress.progressPercentage, 100);
@@ -60,12 +61,7 @@ function MapVisualization({ progress }) {
 
         {/* End marker — Jesus figure */}
         <g transform={`translate(${endX}, ${endY})`}>
-          <circle r="25" fill="#fff" stroke="#32cd32" strokeWidth="3" />
-          <circle r="8" fill="#f4d03f" cx="0" cy="-8" />
-          <path d="M -12 0 L -8 -5 L 8 -5 L 12 0 L 12 20 L -12 20 Z" fill="#4a90e2" />
-          <line x1="-12" y1="5" x2="-20" y2="0" stroke="#4a90e2" strokeWidth="4" strokeLinecap="round" />
-          <line x1="12" y1="5" x2="20" y2="0" stroke="#4a90e2" strokeWidth="4" strokeLinecap="round" />
-          <circle r="12" fill="none" stroke="#ffd700" strokeWidth="2" cx="0" cy="-8" opacity="0.8" />
+          <SaviorIcon size={60} x={-30} y={-30} />
         </g>
 
         {/* Walking pair: girl + boy */}

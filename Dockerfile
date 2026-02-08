@@ -31,9 +31,7 @@ COPY server/src ./server/src
 # Copy built client
 COPY --from=client-builder /app/client/build ./client/build
 
-# Create data directory for SQLite
-RUN mkdir -p /app/server/data && \
-    chown -R nodejs:nodejs /app
+RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 

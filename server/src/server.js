@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+const { initializeDatabase } = require('./db/database');
 const dashboardRoutes = require('./routes/dashboard');
 const entriesRoutes = require('./routes/entries');
 const adminRoutes = require('./routes/admin');
@@ -72,6 +73,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Initialize Firestore (seed settings) before accepting requests
+initializeDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });
