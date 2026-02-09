@@ -32,7 +32,7 @@ router.get('/progress', async (req, res) => {
     // Get all entries for detailed stats
     const allEntries = await queries.getAllEntries.all();
 
-    // Calculate streak
+    // Calculate week streak
     const entriesByWeek = {};
     allEntries.forEach(e => {
       if (!entriesByWeek[e.week_start_date]) {
@@ -42,24 +42,24 @@ router.get('/progress', async (req, res) => {
     });
 
     const sortedWeeks = Object.keys(entriesByWeek).sort((a, b) => new Date(b) - new Date(a));
-    
+
     let streakWeeks = 0;
     const currentWeek = getWeekStartDate();
-    
+
     if (sortedWeeks.length > 0) {
         const currentWeekDate = new Date(currentWeek);
         const mostRecentEntryWeekDate = new Date(sortedWeeks[0]);
         const diffToCurrent = (currentWeekDate - mostRecentEntryWeekDate) / (1000 * 60 * 60 * 24);
-        
+
         if (diffToCurrent <= 7) {
              streakWeeks = 1;
              let lastWeekDate = new Date(sortedWeeks[0]);
-             
+
              for (let i = 1; i < sortedWeeks.length; i++) {
                 const thisWeekDate = new Date(sortedWeeks[i]);
                 const diffTime = Math.abs(lastWeekDate - thisWeekDate);
-                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
-                
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
                 if (diffDays === 7) {
                     streakWeeks++;
                     lastWeekDate = thisWeekDate;
@@ -68,6 +68,49 @@ router.get('/progress', async (req, res) => {
                 }
             }
         }
+    }
+
+    // Calculate day streak
+    const entriesByDay = {};
+    allEntries.forEach(e => {
+      // Extract just the date part (YYYY-MM-DD) from the timestamp
+      const entryDate = e.created_at ? e.created_at.split('T')[0] : null;
+      if (entryDate) {
+        entriesByDay[entryDate] = true;
+      }
+    });
+
+    const sortedDays = Object.keys(entriesByDay).sort((a, b) => new Date(b) - new Date(a));
+
+    let streakDays = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    if (sortedDays.length > 0) {
+      const mostRecentDay = sortedDays[0];
+
+      // Streak is valid if most recent entry is today or yesterday
+      if (mostRecentDay === todayStr || mostRecentDay === yesterdayStr) {
+        streakDays = 1;
+        let lastDate = new Date(mostRecentDay);
+
+        for (let i = 1; i < sortedDays.length; i++) {
+          const thisDate = new Date(sortedDays[i]);
+          const diffTime = lastDate - thisDate;
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 1) {
+            streakDays++;
+            lastDate = thisDate;
+          } else {
+            break;
+          }
+        }
+      }
     }
 
     res.json({
@@ -79,7 +122,8 @@ router.get('/progress', async (req, res) => {
       weekMinutes,
       weekStartDate: currentWeekStart,
       totalEntries: allEntries.length,
-      streakWeeks
+      streakWeeks,
+      streakDays
     });
   } catch (error) {
     console.error('Error getting progress:', error);

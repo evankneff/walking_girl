@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Dashboard from './components/Dashboard';
@@ -11,22 +11,36 @@ import SaviorIcon from './components/SaviorIcon';
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <Router>
       <div className="app">
-        <nav className="navbar">
+        <nav className={`navbar ${isScrolled ? 'navbar-scrolled' : ''}`}>
           <div className="nav-container">
             <div className="nav-left">
               <Link to="/" className="nav-logo-icon">
-                <SaviorIcon size={40} />
+                <SaviorIcon size={36} />
               </Link>
               <Link to="/" className="nav-title">
                 Walking with our Savior
               </Link>
             </div>
-            
-            <button className="menu-btn" onClick={() => setIsMenuOpen(true)}>
+
+            <button
+              className="menu-btn"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="Open menu"
+            >
               <Menu size={24} />
             </button>
 

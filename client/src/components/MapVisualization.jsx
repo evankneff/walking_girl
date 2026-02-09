@@ -1,111 +1,178 @@
-import React from 'react';
-import SaviorIcon from './SaviorIcon';
+import React, { useState, useEffect } from "react";
+import SaviorIcon from "./SaviorIcon";
+import LandscapeBackground from "./LandscapeBackground";
+import WalkingCharacters from "./WalkingCharacters";
+import MilestoneMarker from "./MilestoneMarker";
 
 function MapVisualization({ progress }) {
+  const [pathAnimated, setPathAnimated] = useState(false);
   const progressPercentage = Math.min(progress.progressPercentage, 100);
   const position = progressPercentage / 100;
 
-  const startX = 50;
-  const startY = 300;
-  const endX = 950;
-  const endY = 300;
-  const controlX1 = 300;
-  const controlY1 = 100;
-  const controlX2 = 700;
-  const controlY2 = 500;
+  // Path follows the mountain terrain - starts at base, winds up to peak
+  // The path curves along the mountain slopes
+  const startX = 200; // Center at base of mountain
+  const startY = 700; // Bottom of mountain
+  const endX = 200; // Peak of mountain
+  const endY = 160; // Near the summit
+
+  // Control points create a winding trail up the mountain
+  // Path goes: start -> curve left -> curve right -> peak
+  const controlX1 = 100; // First curve goes to left slope
+  const controlY1 = 520;
+  const controlX2 = 300; // Second curve goes to right slope
+  const controlY2 = 300;
 
   const getPointOnPath = (t) => {
-    const x = Math.pow(1 - t, 3) * startX +
-              3 * Math.pow(1 - t, 2) * t * controlX1 +
-              3 * (1 - t) * Math.pow(t, 2) * controlX2 +
-              Math.pow(t, 3) * endX;
-    const y = Math.pow(1 - t, 3) * startY +
-              3 * Math.pow(1 - t, 2) * t * controlY1 +
-              3 * (1 - t) * Math.pow(t, 2) * controlY2 +
-              Math.pow(t, 3) * endY;
+    const x =
+      Math.pow(1 - t, 3) * startX +
+      3 * Math.pow(1 - t, 2) * t * controlX1 +
+      3 * (1 - t) * Math.pow(t, 2) * controlX2 +
+      Math.pow(t, 3) * endX;
+    const y =
+      Math.pow(1 - t, 3) * startY +
+      3 * Math.pow(1 - t, 2) * t * controlY1 +
+      3 * (1 - t) * Math.pow(t, 2) * controlY2 +
+      Math.pow(t, 3) * endY;
     return { x, y };
   };
 
   const charPosition = getPointOnPath(position);
+  const milestone25 = getPointOnPath(0.25);
+  const milestone50 = getPointOnPath(0.5);
+  const milestone75 = getPointOnPath(0.75);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPathAnimated(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const pathLength = 1000;
 
   return (
-    <div className="map-visualization">
-      <svg viewBox="0 0 1000 600" className="map-svg">
-        <rect width="1000" height="600" fill="#f0f8ff" />
+    <div className="map-visualization map-vertical">
+      <svg
+        viewBox="0 0 400 800"
+        className="map-svg"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Landscape Background with mountain */}
+        <LandscapeBackground />
 
-        {/* Path (background) */}
+        {/* Trail/path on the mountain - background (unprogressed) */}
         <path
           d={`M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`}
           fill="none"
-          stroke="#87ceeb"
-          strokeWidth="8"
-          strokeDasharray="10 5"
-          opacity="0.3"
+          stroke="rgba(139, 119, 101, 0.4)"
+          strokeWidth="12"
+          strokeLinecap="round"
+          strokeDasharray="8 12"
+          className="path-background"
         />
 
-        {/* Path (progress) */}
+        {/* Trail/path - progress fill */}
         <path
           d={`M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`}
           fill="none"
-          stroke="#4a90e2"
+          stroke="#8b6914"
           strokeWidth="8"
-          strokeDasharray={`${2000 * position} 2000`}
+          strokeLinecap="round"
+          strokeDasharray={pathLength}
+          strokeDashoffset={
+            pathAnimated ? pathLength * (1 - position) : pathLength
+          }
+          className="path-progress"
         />
 
-        {/* Start marker */}
-        <g transform={`translate(${startX}, ${startY})`}>
-          <circle r="15" fill="#4a90e2" />
-          <circle r="12" fill="#fff" />
-          <circle r="8" fill="#4a90e2" />
-        </g>
+        {/* Milestone markers along the trail */}
+        <MilestoneMarker
+          percentage={25}
+          position={milestone25}
+          reached={progressPercentage >= 25}
+        />
+        <MilestoneMarker
+          percentage={50}
+          position={milestone50}
+          reached={progressPercentage >= 50}
+        />
+        <MilestoneMarker
+          percentage={75}
+          position={milestone75}
+          reached={progressPercentage >= 75}
+        />
 
-        {/* End marker — Jesus figure */}
-        <g transform={`translate(${endX}, ${endY})`}>
-          <SaviorIcon size={60} x={-30} y={-30} />
-        </g>
-
-        {/* Walking pair: girl + boy */}
+        {/* Start marker at mountain base */}
         <g
-          className="character"
-          transform={`translate(${charPosition.x}, ${charPosition.y})`}
-          style={{ transition: 'transform 0.5s ease-out' }}
+          transform={`translate(${startX}, ${startY})`}
+          className="start-marker"
         >
-          {/* Girl (left) */}
-          <g transform="translate(-18, 0)">
-            <circle r="8" fill="#ffdbac" cx="0" cy="-15" />
-            <ellipse cx="0" cy="-18" rx="10" ry="7" fill="#8b4513" />
-            <path d="M -7 -5 L -5 0 L 5 0 L 7 -5 L 7 13 L -7 13 Z" fill="#ff69b4" />
-            <line x1="-7" y1="2" x2="-12" y2="5" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="7" y1="2" x2="12" y2="5" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="-3" y1="13" x2="-3" y2="22" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="3" y1="13" x2="3" y2="22" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <ellipse cx="-3" cy="23.5" rx="3.5" ry="1.5" fill="#333" />
-            <ellipse cx="3" cy="23.5" rx="3.5" ry="1.5" fill="#333" />
-          </g>
-
-          {/* Boy (right) */}
-          <g transform="translate(18, 0)">
-            <circle r="8" fill="#ffdbac" cx="0" cy="-15" />
-            <ellipse cx="0" cy="-19" rx="9" ry="5" fill="#5b3a1a" />
-            <rect x="-7" y="-5" width="14" height="18" rx="2" fill="#4a90e2" />
-            <line x1="-7" y1="2" x2="-12" y2="5" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="7" y1="2" x2="12" y2="5" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="-3" y1="13" x2="-3" y2="22" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="3" y1="13" x2="3" y2="22" stroke="#ffdbac" strokeWidth="2.5" strokeLinecap="round" />
-            <ellipse cx="-3" cy="23.5" rx="3.5" ry="1.5" fill="#333" />
-            <ellipse cx="3" cy="23.5" rx="3.5" ry="1.5" fill="#333" />
-          </g>
+          <circle r="18" fill="#667eea" opacity="0.25" />
+          <circle r="14" fill="#667eea" />
+          <circle r="10" fill="white" />
+          <circle r="6" fill="#667eea" />
         </g>
+
+        {/* Jesus at the mountain peak with divine glow */}
+        <g transform={`translate(${endX}, ${endY})`} className="end-marker">
+          {/* Divine glow behind Jesus */}
+          <circle r="55" fill="#ffd700" opacity="0.12" className="goal-glow" />
+          <circle r="40" fill="#fff9e6" opacity="0.25" />
+          <circle r="28" fill="#fffef5" opacity="0.4" />
+          <SaviorIcon size={70} x={-35} y={-35} />
+        </g>
+
+        {/* Walking characters on the trail */}
+        <WalkingCharacters
+          x={charPosition.x}
+          y={charPosition.y}
+          isMoving={progressPercentage < 100}
+        />
 
         {/* Location labels */}
-        <text x={startX} y={startY + 40} textAnchor="middle" className="location-label">
-          {progress.startLocation}
-        </text>
-        <text x={endX} y={endY + 40} textAnchor="middle" className="location-label">
-          {progress.endLocation}
-        </text>
+        <g className="location-labels">
+          {/* Start label at base */}
+          <rect
+            x={startX - 50}
+            y={startY + 25}
+            width="100"
+            height="24"
+            rx="12"
+            fill="rgba(255,255,255,0.92)"
+            className="label-bg"
+          />
+          <text
+            x={startX}
+            y={startY + 42}
+            textAnchor="middle"
+            className="location-label"
+            style={{ fontSize: "11px", fontWeight: 700, fill: "#4a5568" }}
+          >
+            {progress.startLocation}
+          </text>
+
+          {/* End label at peak */}
+          <rect
+            x={endX - 50}
+            y={endY - 65}
+            width="100"
+            height="24"
+            rx="12"
+            fill="rgba(255,255,255,0.92)"
+            className="label-bg"
+          />
+          <text
+            x={endX}
+            y={endY - 48}
+            textAnchor="middle"
+            className="location-label"
+            style={{ fontSize: "11px", fontWeight: 700, fill: "#4a5568" }}
+          >
+            {progress.endLocation}
+          </text>
+        </g>
       </svg>
 
+      {/* Progress bar */}
       <div className="progress-bar-container">
         <div className="progress-bar">
           <div
