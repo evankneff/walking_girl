@@ -290,6 +290,45 @@ body {
   cursor: not-allowed;
 }
 
+.name-list {
+  margin-top: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: #fafbff;
+  border: 1px solid #e0e4ff;
+  padding: 0.25rem;
+}
+
+.name-list-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #333;
+  display: block;
+}
+
+.name-list-item:hover {
+  background: #e8ecff;
+}
+
+.name-list-item.selected {
+  background: #667eea;
+  color: #fff;
+  font-weight: 600;
+}
+
+.name-list-empty {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: #777;
+}
+
 .form-hint {
   display: block;
   font-size: 0.8rem;
@@ -321,6 +360,36 @@ body {
 .submit-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.secondary-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #f0f4ff;
+  color: #333;
+  border: 1px solid #d0d7ff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.secondary-button:hover {
+  background: #e0e7ff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.secondary-button.muted {
+  background: #f8f9fa;
+  border-color: #e0e0e0;
+  color: #555;
+}
+
+.secondary-button.muted:hover {
+  background: #eceff1;
 }
 
 .message {
